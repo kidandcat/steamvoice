@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/peer.min.js"></script>
+<head>
+  <link href="http://store.akamai.steamstatic.com/public/shared/css/motiva_sans.css?v=ful_LJT3NQYl" rel="stylesheet" type="text/css" >
+  <link href="http://store.akamai.steamstatic.com/public/shared/css/shared_global.css?v=wTcoFxa14BHr" rel="stylesheet" type="text/css" >
+  <link href="http://store.akamai.steamstatic.com/public/shared/css/buttons.css?v=ZQhT8EbnYTgW" rel="stylesheet" type="text/css" >
+  <link href="http://store.akamai.steamstatic.com/public/css/v6/store.css?v=SRzRT-Uuxs8U" rel="stylesheet" type="text/css" >
+  <link href="http://store.akamai.steamstatic.com/public/css/styles_linux.css?v=.srZuTsIiIsbq" rel="stylesheet" type="text/css" >
+  <link href="http://store.akamai.steamstatic.com/public/css/v6/home.css?v=zDqHeFsHKvcS" rel="stylesheet" type="text/css" >
+  <link href="http://store.akamai.steamstatic.com/public/shared/css/shared_responsive.css?v=FVU9KEgNYUuN" rel="stylesheet" type="text/css" >
+  <link rel="stylesheet" type="text/css" href="stylesheets/style.css">
+  <title>title</title>
+  <head>
+    <body>
+      <audio id="audio" autoplay></audio>
+      <input id="steamInfoContainer" type="hidden" value="<%= steamID %>">
+      <div id="header"></div>
+      <article id="main">
+        <a class="button" href="auth/steam" id="login1"><img id="login2" src="/images/sits_large_border.png" /></a>
+        <a class="button" href="logout" id="logout">logout</a>
+        <a class="button" type="button" id="newroom" onclick="newRoom()">New room</a>
+      </article>
+      <article id="friends"></article>
+      <footer>
+        <a class="button" href="http://steampowered.com">Powered by Steam</a>
+      </footer>
+    </body>
+    <script src="/js/client.js"></script>
+    </html>

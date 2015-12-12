@@ -1,0 +1,147 @@
+
+var Steam = require('steam-webapi');
+var crypto = require('crypto');
+//var redis   = require("redis");
+//var client  = redis.createClient();
+var request = require('request');
+var passportSocketIo = require('passport.socketio');
+var publicKey = "BA2681B8FA62A55A007EAE5E3F279212";
+Steam.key = publicKey;
+require('events').EventEmitter.prototype._maxListeners = 100;
+
+var rooms = [];
+var steamIDs = [];
+
+module.exports.listen = function (io, console){
+	console.log("socket.io listening".red);
+
+	function time() {
+		var time = new Date();
+		return ((time.getHours() < 10)?"0":"") + time.getHours() +":"+ ((time.getMinutes() < 10)?"0":"") + time.getMinutes() +":"+ ((time.getSeconds() < 10)?"0":"") + time.getSeconds();
+	};
+
+	function randomString(length) {
+		return crypto.randomBytes(20).toString('hex');
+	};
+
+
+
+	// **********    socket connected
+	io.sockets.on('connection', function(socket){
+		console.log(time() + ' Socket connected'.blue);
+		socket.roomID = '';
+		socket.steamID = '';
+
+		socket.on('steamReady',function(dd){
+			socket.steamID = dd.steamID;
+			steamIDs[socket.steamID] = socket;
+			socket.emit('newRoomId', { room: 'no' });
+		});
+
+
+		function getSteamFriends(rom){
+			Steam.ready(function(err) {
+				if (err) return console.log(err.red);
+				var steam = new Steam();
+
+				data = {};
+				data.steamid = socket.steamID;
+				data.relationship = "friend";
+				steam.getFriendList(data, function (err, data) {
+					if(err){
+						console.log(err.red);
+						return 0;
+					}
+					data.friendslist.friends.forEach(function(e){
+						if(typeof steamIDs[e.steamid] !== 'undefined')
+						request.get(
+							'http://steamcommunity.com/profiles/' + e.steamid + '/?xml=1',
+							//{ form: { key: 'value' } },
+							function (error, response, body) {
+								if (!error && response.statusCode == 200) {
+									var name = body.substring(body.indexOf("<steamID>"),body.indexOf("</steamID>")).split("CDATA[")[1].slice(0,-3);
+									var online = body.substring(body.indexOf("<stateMessage>"),body.indexOf("</stateMessage>")).split("CDATA[")[1].slice(0,-3);
+									var avatar = body.substring(body.indexOf("<avatarMedium>"),body.indexOf("</avatarMedium>")).split("CDATA[")[1].slice(0,-3);
+									//console.log('friend online ' + name);
+									if(typeof steamIDs[e.steamid] !== 'undefined' && steamIDs[e.steamid].roomID != ''){
+										//console.log('friend on steamvoice');
+										socket.emit('friend', { nick: name, avatar: avatar, steamid: e.steamid, room: steamIDs[e.steamid].roomID });
+										if(socket.roomID == steamIDs[e.steamid].roomID){
+											console.log('calling friend, same room, id ' + e.steamid);
+											socket.emit('call', { targetID: e.steamid });
+										}
+									}else if(typeof steamIDs[e.steamid] !== 'undefined'){
+										//console.log('friend not in room');
+										socket.emit('friend', { nick: name, avatar: avatar, steamid: e.steamid, room: 'no' });
+									}else{
+										//console.log('friend not in steamvoice');
+									}
+								}else{
+									console.log(error.red);
+								}
+							}
+						);
+					});
+				});
+			});
+		};
+
+
+
+		socket.on('friends', function(){
+			getSteamFriends(socket.roomID);
+		});
+
+
+
+		socket.on('newRoom', function(){
+			console.log(rooms);
+			var roomID = randomString(30);
+			rooms[roomID] = [];
+			socket.roomID = roomID;
+			rooms[roomID].push(socket.steamID);
+			socket.emit('newRoomId', { room: socket.roomID });
+		});
+
+
+		socket.on('leaveRoom', function(){
+			//console.log('leaveRoom');
+			if(socket.roomID != ''){
+				var o = rooms[socket.roomID].indexOf(socket.steamID);
+				if(o != -1){rooms[socket.roomID].splice(o, 1);}
+				socket.emit('newRoomId', { room: 'no' });
+                                console.log('deleted from room: ' + socket.roomID);
+				console.log(rooms);
+                                socket.roomID = '';
+			}
+		});
+
+
+		socket.on('enterRoom', function(data){
+			if(typeof data !== 'undefined' && typeof rooms[steamIDs[data.roomID].roomID] !== 'undefined'){
+				rooms[steamIDs[data.roomID].roomID].push(socket.steamID);
+				socket.roomID = steamIDs[data.roomID].roomID;
+				socket.emit('newRoomId', { room: steamIDs[data.roomID].roomID });
+				console.log('joined room ');
+				console.log(rooms);
+			}else{
+				socket.emit('newRoomId', { room: 'no' });
+			}
+		});
+
+
+
+		socket.on('disconnect',function(){
+			console.log(time() + ' Socket disconnect'.blue);
+			var i = steamIDs.indexOf(socket.steamID);
+			if(i != -1){steamIDs.splice(i, 1);}
+			if(socket.roomID != ''){
+				var o = rooms[socket.roomID].indexOf(socket.steamID);
+				if(o != -1){rooms[socket.roomID].splice(o, 1);}
+			}
+		});
+	});
+
+
+	return io;
+}

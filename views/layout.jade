@@ -1,0 +1,9 @@
+doctype html
+html(manifest='offline.manifest')
+  head
+    title= title
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(href='/javascripts/socket.io.js')
+    script(href='/javascripts/client.js')
+  body
+    block content
